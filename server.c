@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <uv.h>
+#include <sys/wait.h>
 #include "encrypt.h"
 #include "utils.h"
 #include "server.h"
