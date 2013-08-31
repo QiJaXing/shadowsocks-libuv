@@ -514,6 +514,17 @@ static void connect_cb(uv_stream_t* listener, int status)
 	LOGCONN(&ctx->client, "Accepted connection from %s");
 }
 
+void daemonize(void)
+{
+  pid_t pid = 0;
+  do {
+    if ((pid = fork()) == 0) break;;
+    if (pid < 0) FATAL("fork error, %s", strerror(errno));
+    for (; 1; sleep(5)) if (wait(NULL) > 0) break;
+  } while(1);
+  LOGI("start");
+}
+
 int main(int argc, char *argv[])
 {
 	char **newargv = uv_setup_args(argc, argv);
@@ -524,7 +535,7 @@ int main(int argc, char *argv[])
 	char *pid_path = PID_FILE;
 
 	char opt;
-	while((opt = getopt(argc, newargv, "l:p:k:f:m:")) != -1) { // not portable to windows
+	while((opt = getopt(argc, newargv, "l:p:k:f:m:d")) != -1) { // not portable to windows
 		switch(opt) {
 			case 'l':
 			    server_listen = optarg;
@@ -544,6 +555,10 @@ int main(int argc, char *argv[])
 			    else if (!strcmp("shadow", optarg))
 			    	crypt_method = METHOD_SHADOWCRYPT;
 			    break;
+      case 'd':
+          LOGI("daemonize");
+          daemonize();
+          break;
 			default:
 				fprintf(stderr, USAGE, newargv[0]);
 				abort();
