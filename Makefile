@@ -1,41 +1,43 @@
-UNAME := $(shell uname)
+# compile
+CFLAGS  = -Wall -g -I/usr/local/opt/openssl/include -Iinclude
+LDFLAGS = -lcrypto -luv -L/usr/local/opt/openssl/lib
+# compiler
+CC = gcc
 
-RTFLAGS=-lrt
-ifeq ($(UNAME), Darwin)
-RTFLAGS=-framework CoreServices
-endif
-OLEVEL=-O2 -DNDEBUG
-CFLAGS=-Wall $(OLEVEL) -I libuv/include -std=gnu99
-FILES=server.c utils.c encrypt.c md5.c rc4.c
-APP=server
+# files
+SRC = $(shell find src -name "*.c" -type f)
+OBJ = $(patsubst src/%.c, build/%.o, $(SRC)) 
+DEP = $(OBJ:.o=.d)
+BIN = local
 
-all: $(FILES) libuv/libuv.a
-	$(CC) $(CFLAGS) -o \
-	$(APP) $(FILES) \
-	libuv/libuv.a -lpthread -lcrypto -lm $(RTFLAGS)
+# target
+all: $(patsubst %, bin/ss-%, $(BIN))
 
-libuv/libuv.a:
-	$(MAKE) -C libuv
+bin/ss-%: $(OBJ) $(DEP) build/ss-%.o build/ss-%.d
+	@mkdir -p $(dir $@)
+	$(CC) $(filter %.o, $(^)) $(LDFLAGS) $(CFLAGS) -o $@
 
-valgrind: OLEVEL=-O0 -g
-valgrind: all
-	valgrind --leak-check=full ./server
+define build-object
+	@mkdir -p $(dir $@)
+	$(CC) $< -c $(CFLAGS) -o $@
+endef
 
-debug: OLEVEL=-O0 -g
-debug: all
+define build-depend
+	@mkdir -p $(dir $@)
+	@$(CC) -MM $(CFLAGS) $< | sed 's#\($(notdir $*)\)\.o[ :]*#build/$*.o $@: #g' > $@
+endef
 
-gprof: OLEVEL=-O0 -g -pg
-gprof: all
+build/ss-%.o: %.c
+	$(build-object)
+build/ss-%.d: %.c
+	$(build-depend)
 
-test: OLEVEL=-O0 -g
-test: FILES=tests.c encrypt.c md5.c rc4.c
-test: APP=test
-test: all
-	./test
-	cd pytest; python test.py
+build/%.o: src/%.c
+	$(build-object)
+build/%.d: src/%.c
+	$(build-depend)
 
 clean:
-	$(MAKE) -C libuv clean
-	rm -f server
-	rm -rf *.dSYM
-	rm -rf test
+	$(RM) -r bin build
+
+sinclude $(DEP)
