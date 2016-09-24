@@ -1,6 +1,6 @@
 # compile
-CFLAGS  = -Wall -g -I/usr/local/opt/openssl/include -Iinclude
-LDFLAGS = -lcrypto -luv -L/usr/local/opt/openssl/lib
+CFLAGS  = -Wall -g -Iinclude
+LDFLAGS = -lcrypto -luv -Iopenssl
 # compiler
 CC = gcc
 
@@ -10,8 +10,6 @@ OBJ = $(patsubst src/%.c, build/%.o, $(SRC))
 DEP = $(OBJ:.o=.d)
 BIN = local
 
-# target
-all: $(patsubst %, bin/ss-%, $(BIN))
 
 bin/ss-%: $(OBJ) $(DEP) build/ss-%.o build/ss-%.d
 	@mkdir -p $(dir $@)
@@ -36,6 +34,9 @@ build/%.o: src/%.c
 	$(build-object)
 build/%.d: src/%.c
 	$(build-depend)
+	
+# target
+all: $(patsubst %, bin/ss-%, $(BIN))
 
 clean:
 	$(RM) -r bin build

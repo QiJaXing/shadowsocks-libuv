@@ -142,7 +142,7 @@ handshack_2nd(uv_stream_t * stream, shadow_t * shadow, handshack_t * hands)
   uv_connect_t * req = malloc(sizeof(uv_connect_t));
   req->data          = shadow;
   
-  if (!uv_tcp_connect(req, shadow->remote, remote_addr, remote_connect_cb)) return 0;
+  if (!uv_tcp_connect(req, shadow->remote, (const struct sockaddr*)& remote_addr, remote_connect_cb)) return 0;
   uv_close((uv_handle_t *)shadow->client, shadow_free_cb);
   return ERROR;
 }

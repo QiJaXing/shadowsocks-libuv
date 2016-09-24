@@ -5,8 +5,8 @@ PROJECT = shadow
 CC = gcc
 
 # link
-CFLAGS  = -Wall -g -I/usr/local/opt/openssl/include
-LDFLAGS = -luv -L/usr/local/opt/openssl/lib -lcrypto
+CFLAGS  = -Wall -g -I../include
+LDFLAGS = -luv -Lopenssl -lcrypto
 
 # file
 SRC = $(shell find . -name "*.c" -type f)
