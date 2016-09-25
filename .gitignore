@@ -4,3 +4,4 @@ bin
 .cproject
 .travis.yml
 .project
+/Linux GCC release/

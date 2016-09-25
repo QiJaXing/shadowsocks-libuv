@@ -7,7 +7,7 @@
 //
 #include <getopt.h>
 #include <shadow.h>
-
+#include <string.h>
 conf_t conf;
 
 static void help(void) {
@@ -69,9 +69,7 @@ static void parse(int argc, char *argv[]) {
 			break;
 		if (!conf.local.ip)
 			break;
-		if (!conf.local.ip)
-			break;
-		if (!conf.remote.port)
+		if (!conf.local.port)
 			break;
 		if (!conf.pass)
 			break;
@@ -79,7 +77,6 @@ static void parse(int argc, char *argv[]) {
 			break;
 		return;
 	} while (0);
-
 	help();
 }
 
@@ -93,9 +90,9 @@ int main(int argc, char *argv[]) {
 	uv_stream_t * stream = (uv_stream_t *) listener;
 	uv_loop_t * loop = uv_default_loop();
 	uv_loop_init(loop);
-	struct sockaddr_in6 addr;
+	struct sockaddr_in addr;
 	int iret;
-	iret = uv_ip6_addr(conf.local.ip, atoi(conf.local.port), &addr);
+	iret = uv_ip4_addr(conf.local.ip, atoi(conf.local.port), &addr);
 	if (iret < 0) {
 		fprintf(stderr, "%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
 		return iret;

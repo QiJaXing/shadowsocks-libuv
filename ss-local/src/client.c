@@ -13,7 +13,7 @@ void client_connect_cb(uv_stream_t * listener, int status) {
 	uv_stream_t * stream = (uv_stream_t *) shadow->client;
 	int iret;
 	// initiate first handshake
-	handshack_t * hands = calloc(1, sizeof(handshack_t));
+	handshake_t * hands = calloc(1, sizeof(handshake_t));
 	hands->step = 1;
 	hands->data = calloc(1, socks5_max_len);
 	shadow->data = hands;
@@ -33,7 +33,7 @@ void client_connect_cb(uv_stream_t * listener, int status) {
 		if (iret < 0)
 			break;
 //    if (uv_tcp_keepalive(shadow->client, 1, 60))          break;
-		iret = uv_read_start(stream, handshack_alloc_cb, handshack_readd_cb);
+		iret = uv_read_start(stream, handshake_alloc_cb, handshake_read_cb);
 		if (iret < 0)
 			break;
 		return;
@@ -44,28 +44,27 @@ void client_connect_cb(uv_stream_t * listener, int status) {
 	fprintf(stderr, "%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
 }
 
-void client_readd_cb(uv_stream_t * stream, ssize_t nread, uv_buf_t buf) {
+//void client_readd_cb(uv_stream_t * stream, ssize_t nread, uv_buf_t buf)
+void client_read_cb(uv_stream_t * stream, long int nread,
+		const struct uv_buf_t * buf) {
 	shadow_t * shadow = stream->data;
 	uv_write_t * write = malloc(sizeof(uv_write_t));
-
-//  printf("%s %ld\n", __FUNCTION__, nread);
-
-	do {
-		if (nread <= 0)
-			break;
-		if (nread == 0)
-			return;
-		// printf("%s\n", buf.base);
-		write->data = buf.base = cipher_encrypt(shadow, &buf.len, buf.base,
-				nread);
-		// printf("client: %s\n", buf.base);
-		if (uv_write(write, (uv_stream_t *) shadow->remote, &buf, 1,
-				remote_write_cb))
-			break;
+	if (nread == 0)
 		return;
-	} while (0);
-
-	printf("client EOF\n");
+	if (nread > 0) {
+		int iret;
+		uv_buf_t _=cipher_encrypt(shadow, buf, nread);
+		iret = uv_write(write, (uv_stream_t *) shadow->remote, &_ , 1,
+				remote_write_cb);
+		if (iret >= 0) {
+			return;
+		} else {
+			fprintf(stderr, "%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
+		}
+	}
+	if (nread < 0) {
+		fprintf(stderr, "%s:\t%s\n", uv_err_name(nread), uv_strerror(nread));
+	}
 	uv_close((uv_handle_t *) stream, client_close_cb);
 }
 
@@ -74,7 +73,7 @@ void client_write_cb(uv_write_t * write, int status) {
 
 	if (!status)
 		status = uv_read_start((uv_stream_t *) shadow->remote, shadow_alloc_cb,
-				remote_readd_cb);
+				remote_read_cb);
 
 	free(write->data);
 	free(write);
