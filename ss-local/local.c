@@ -18,11 +18,12 @@ static void help(void) {
 					"  -b <local_host>            local address to bind\n"
 					"  -l <local_port>            port number of your local server\n"
 					"  -k <password>              password of your remote server\n"
-					"  -m <encrypt_method>        encrypt method: table, rc4, rc4-md5,\n"
+					"  -m <encrypt_method>        encrypt method: rc4, "
 					"                             aes-128-cfb, aes-192-cfb, aes-256-cfb,\n"
 					"                             bf-cfb, camellia-128-cfb, camellia-192-cfb,\n"
 					"                             camellia-256-cfb, cast5-cfb, des-cfb,\n"
-					"                             idea-cfb, rc2-cfb and seed-cfb\n"
+					"                             idea-cfb, rc2-cfb and seed-cfb\n "
+					"	Use `openssl list-cipher-commands to` list all supported encrypt method\n"
 //         "  [-t <timeout>]             socket timeout in seconds\n"
 //         "  [-c <config_file>]         config file in json\n"
 //         "  [-i <interface>]           network interface to bind,\n"
@@ -35,7 +36,6 @@ static void help(void) {
 
 static void parse(int argc, char *argv[]) {
 	memset(&conf, 0, sizeof(conf));
-
 	char opt;
 	while ((opt = getopt(argc, argv, "s:p:b:l:k:m:")) != -1)
 		switch (opt) {

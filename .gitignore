@@ -5,3 +5,5 @@ bin
 .travis.yml
 .project
 /Linux GCC release/
+.metadata/
+RemoteSystemsTempFiles/

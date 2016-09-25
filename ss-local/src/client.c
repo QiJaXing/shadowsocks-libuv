@@ -11,7 +11,7 @@
 void client_connect_cb(uv_stream_t * listener, int status) {
 	shadow_t * shadow = shadow_new();
 	uv_stream_t * stream = (uv_stream_t *) shadow->client;
-	int iret;
+	int iret = 0;
 	// initiate first handshake
 	handshake_t * hands = calloc(1, sizeof(handshake_t));
 	hands->step = 1;
@@ -41,7 +41,8 @@ void client_connect_cb(uv_stream_t * listener, int status) {
 	} while (0);
 
 	shadow_free(shadow);
-	fprintf(stderr, "%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
+	if (iret < 0)
+		fprintf(stderr, "%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
 }
 
 //void client_readd_cb(uv_stream_t * stream, ssize_t nread, uv_buf_t buf)
@@ -53,8 +54,8 @@ void client_read_cb(uv_stream_t * stream, long int nread,
 		return;
 	if (nread > 0) {
 		int iret;
-		uv_buf_t _=cipher_encrypt(shadow, buf, nread);
-		iret = uv_write(write, (uv_stream_t *) shadow->remote, &_ , 1,
+		uv_buf_t _ = cipher_encrypt(shadow, buf, nread);
+		iret = uv_write(write, (uv_stream_t *) shadow->remote, &_, 1,
 				remote_write_cb);
 		if (iret >= 0) {
 			return;

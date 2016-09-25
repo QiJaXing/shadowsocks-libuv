@@ -11,7 +11,7 @@
 shadow_t *
 shadow_new(void) {
 	shadow_t * shadow = calloc(1, sizeof(shadow_t));
-	shadow->cipher = cipher_new(PASS);
+	shadow->cipher = cipher_new();
 	shadow->socks5 = calloc(1, sizeof(socks5_t));
 	shadow->client = calloc(1, sizeof(uv_tcp_t));
 	shadow->remote = calloc(1, sizeof(uv_tcp_t));

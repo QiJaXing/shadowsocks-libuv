@@ -74,7 +74,7 @@ typedef struct {
 	} local, remote;
 } conf_t;
 
-cipher_t * cipher_new(const char *);
+cipher_t * cipher_new();
 void cipher_free(cipher_t *);
 uv_buf_t cipher_encrypt(shadow_t * shadow,const struct uv_buf_t*, size_t);
 //char * cipher_decrypt(shadow_t *, size_t *, char *, size_t);

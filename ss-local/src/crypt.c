@@ -10,7 +10,8 @@
 
 extern conf_t conf;
 
-cipher_t * cipher_new(const char * pass) {
+cipher_t * cipher_new() {
+	//OpenSSL_add_all_algorithms();
 	OpenSSL_add_all_algorithms();
 	cipher_t * cipher = calloc(1, sizeof(cipher_t));
 	if(cipher==NULL){
