@@ -39,6 +39,7 @@ void shadow_free(shadow_t * shadow) {
 }
 
 void shadow_free_cb(uv_handle_t * handle) {
+	//TO-DO: may free null pointers
 	shadow_t * shadow = handle->data;
 	shadow_free(shadow);
 	// printf("closed\n");

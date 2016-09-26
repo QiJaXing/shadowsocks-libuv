@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 	int iret;
 	iret = uv_ip4_addr(conf.local.ip, atoi(conf.local.port), &addr);
 	if (iret < 0) {
-		fprintf(stderr, "%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
+		fprintf(stderr, "uv_ipv4_addr:\t%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
 		return iret;
 	}
 	do {

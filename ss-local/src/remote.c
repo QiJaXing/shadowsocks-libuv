@@ -11,7 +11,9 @@
 void remote_connect_cb(uv_connect_t * req, int status) {
 	shadow_t * shadow = (shadow_t *) req->data;
 	uv_stream_t * stream = (uv_stream_t *) shadow->client;
-	if (!status) {
+	if (status < 0)
+		uv_close((uv_handle_t *) shadow->remote, remote_close_cb);
+	if (status == 0) {
 		socks5_s * fake = calloc(1, sizeof(socks5_s) + 6);
 		fake->ver = 5;
 		fake->cmd = 0;
@@ -20,27 +22,20 @@ void remote_connect_cb(uv_connect_t * req, int status) {
 		uv_buf_t buf;
 		buf.len = sizeof(socks5_s) + 6;
 		buf.base = (char *) fake;
-
 		uv_write_t * write = malloc(sizeof(uv_write_t));
 		write->data = fake;
-
 		status = uv_write(write, stream, &buf, 1, fakereply_write_cb);
 	}
-
-	if (status)
-		uv_close((uv_handle_t *) shadow->remote, remote_close_cb);
 	free(req);
 }
 
 void remote_write_cb(uv_write_t * write, int status) {
 	shadow_t * shadow = (shadow_t *) write->handle->data;
-
 	if (!status)
 		status = uv_read_start((uv_stream_t *) shadow->remote, shadow_alloc_cb,
 				remote_read_cb);
 	free(write->data);
 	free(write);
-
 	if (status)
 		uv_close((uv_handle_t *) shadow->remote, remote_close_cb);
 }
@@ -49,23 +44,25 @@ void remote_write_cb(uv_write_t * write, int status) {
 void remote_read_cb(uv_stream_t * stream, long int nread,
 		const struct uv_buf_t *buf) {
 	shadow_t * shadow = stream->data;
-	uv_write_t * write = malloc(sizeof(uv_write_t));
 	if (nread == 0)
 		return;
 	if (nread > 0) {
 		int iret;
-		printf("%s\n",buf->base);
-		uv_buf_t _=cipher_decrypt(shadow, buf, nread);
-		iret = uv_write(write, (uv_stream_t *) shadow->remote,&_ , 1,
+		uv_buf_t _ = cipher_decrypt(shadow, buf, nread);
+		uv_write_t * write = malloc(sizeof(uv_write_t));
+		write->data = _.base;
+		iret = uv_write(write, (uv_stream_t *) shadow->client, &_, 1,
 				shadow_write_cb);
 		if (iret >= 0) {
 			return;
 		} else {
-			fprintf(stderr, "%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
+			fprintf(stderr, "remote_read_cb, uv_write\t%s:\t%s\n",
+					uv_err_name(iret), uv_strerror(iret));
 		}
 	}
 	if (nread < 0) {
-		fprintf(stderr, "%s:\t%s\n", uv_err_name(nread), uv_strerror(nread));
+		fprintf(stderr, "remote_read_cb\t%s:\t%s\n", uv_err_name(nread),
+				uv_strerror(nread));
 	}
 	uv_close((uv_handle_t *) stream, remote_close_cb);
 }

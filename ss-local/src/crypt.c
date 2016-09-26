@@ -14,13 +14,13 @@ cipher_t * cipher_new() {
 	//OpenSSL_add_all_algorithms();
 	OpenSSL_add_all_algorithms();
 	cipher_t * cipher = calloc(1, sizeof(cipher_t));
-	if(cipher==NULL){
-		fprintf(stderr,"can not allocate memory for cipher!\n");
+	if (cipher == NULL) {
+		fprintf(stderr, "can not allocate memory for cipher!\n");
 		exit(-1);
 	}
 	cipher->type = EVP_get_cipherbyname(conf.method);
-	if(cipher->type ==NULL){
-		fprintf(stderr,"encrypt method %s not supported!\n ",conf.method);
+	if (cipher->type == NULL) {
+		fprintf(stderr, "encrypt method %s not supported!\n ", conf.method);
 		exit(-2);
 	}
 	cipher->keyl = EVP_CIPHER_key_length(cipher->type);
@@ -40,7 +40,7 @@ void cipher_free(cipher_t * cipher) {
 	free(cipher);
 }
 
-uv_buf_t  cipher_encrypt(shadow_t * shadow, const struct uv_buf_t* plain,
+uv_buf_t cipher_encrypt(shadow_t * shadow, const struct uv_buf_t* plain,
 		size_t plainl) {
 	size_t encryptl;
 	cipher_t * cipher = shadow->cipher;
@@ -70,7 +70,7 @@ uv_buf_t  cipher_encrypt(shadow_t * shadow, const struct uv_buf_t* plain,
 		encryptl = plainl;
 		encrypt = malloc(encryptl);
 		dst = (uint8_t *) encrypt;
-		src = (uint8_t *)plain->base;
+		src = (uint8_t *) plain->base;
 	}
 	int _;
 	EVP_CipherUpdate(&cipher->encrypt.ctx, dst, &_, (uint8_t *) plain->base,

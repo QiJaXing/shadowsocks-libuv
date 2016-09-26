@@ -48,7 +48,6 @@ int handshake(uv_stream_t * stream) {
 	default:
 		break;
 	}
-
 	uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
 	return ERROR;
 }
@@ -82,7 +81,7 @@ static int handshake_1st(uv_stream_t * stream, shadow_t * shadow,
 
 		uv_write_t * write = malloc(sizeof(uv_write_t));
 		write->data = rep;
-
+		fprintf(stderr, "handshake step %d finished!\n", hands->step);
 		// move to step 2
 		hands->step = 2;
 
@@ -136,8 +135,10 @@ static int handshake_2nd(uv_stream_t * stream, shadow_t * shadow,
 	req->data = shadow;
 
 	if (!uv_tcp_connect(req, shadow->remote,
-			(const struct sockaddr*) &remote_addr, remote_connect_cb))
+			(const struct sockaddr*) &remote_addr, remote_connect_cb)) {
+		fprintf(stderr, "handshake step %d finished!\n", hands->step);
 		return 0;
+	}
 	uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
 	return ERROR;
 }
@@ -166,13 +167,14 @@ void handshake_read_cb(uv_stream_t *stream, long int nread,
 
 	shadow_t * shadow = stream->data;
 	handshake_t * hands = shadow->data;
+	int iret = 0;
 	if (nread > 0) {
 		memcpy(hands->data + hands->size, buf->base, nread);
+		free(buf->base);
 		hands->size += nread;
-		handshake(stream);
+		iret = handshake(stream);
 	}
-	free(buf->base);
-	if (nread < 0)
+	if (nread < 0 || iret == ERROR)
 		uv_close((uv_handle_t *) stream, shadow_free_cb);
 }
 
