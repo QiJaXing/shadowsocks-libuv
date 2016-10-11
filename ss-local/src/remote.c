@@ -60,16 +60,12 @@ void remote_read_cb(uv_stream_t * stream, long int nread,
 					uv_err_name(iret), uv_strerror(iret));
 		}
 	}
-	if (nread < 0) {
-		fprintf(stderr, "remote_read_cb\t%s:\t%s\n", uv_err_name(nread),
-				uv_strerror(nread));
-	}
 	uv_close((uv_handle_t *) stream, remote_close_cb);
 }
 
 void remote_shutdown_cb(uv_shutdown_t * shutdown, int status) {
 	shadow_t * shadow = (shadow_t *) shutdown->data;
-	// shadow_free(shadow);
+// shadow_free(shadow);
 	uv_close((uv_handle_t *) shadow->remote, shadow_free_cb);
 	free(shutdown);
 }

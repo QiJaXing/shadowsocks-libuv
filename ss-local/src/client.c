@@ -58,9 +58,6 @@ void client_read_cb(uv_stream_t * stream, long int nread,
 			fprintf(stderr, "client_read_cb, uv_write:\t%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
 		}
 	}
-	if (nread < 0) {
-		fprintf(stderr, "client_read_cb\t%s:\t%s\n", uv_err_name(nread), uv_strerror(nread));
-	}
 	uv_close((uv_handle_t *) stream, client_close_cb);
 }
 

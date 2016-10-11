@@ -73,7 +73,7 @@ uv_buf_t cipher_encrypt(shadow_t * shadow, const struct uv_buf_t* plain,
 		src = (uint8_t *) plain->base;
 	}
 	int _;
-	EVP_CipherUpdate(&cipher->encrypt.ctx, dst, &_, (uint8_t *) plain->base,
+	EVP_CipherUpdate(&cipher->encrypt.ctx, dst, &_, src,
 			(int) plainl);
 	free(plain->base);
 	return uv_buf_init(encrypt, encryptl);
@@ -88,18 +88,18 @@ uv_buf_t cipher_decrypt(shadow_t * shadow, const struct uv_buf_t* encrypt,
 	if (!cipher->decrypt.init) {
 		int ivl = EVP_CIPHER_iv_length(cipher->type);
 		uint8_t * iv = malloc(ivl);
-		memcpy(iv, encrypt, ivl);
+		memcpy(iv, encrypt->base, ivl);
 
 		plainl = encryptl - ivl;
 		plain = malloc(plainl);
-		src = (uint8_t *) encrypt + ivl;
+		src = (uint8_t *) encrypt->base + ivl;
 		EVP_CipherInit_ex(&cipher->decrypt.ctx, cipher->type, NULL, cipher->key,
 				iv, 0);
 		free(iv);
 		cipher->decrypt.init = 1;
 	} else {
 		plainl = encryptl;
-		src = (uint8_t *) encrypt;
+		src = (uint8_t *) encrypt->base;
 		plain = malloc(plainl);
 	}
 	int _;

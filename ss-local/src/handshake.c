@@ -81,7 +81,7 @@ static int handshake_1st(uv_stream_t * stream, shadow_t * shadow,
 
 		uv_write_t * write = malloc(sizeof(uv_write_t));
 		write->data = rep;
-		fprintf(stderr, "handshake step %d finished!\n", hands->step);
+		// fprintf(stderr, "handshake step %d finished!\n", hands->step);
 		// move to step 2
 		hands->step = 2;
 
@@ -136,7 +136,7 @@ static int handshake_2nd(uv_stream_t * stream, shadow_t * shadow,
 
 	if (!uv_tcp_connect(req, shadow->remote,
 			(const struct sockaddr*) &remote_addr, remote_connect_cb)) {
-		fprintf(stderr, "handshake step %d finished!\n", hands->step);
+		// fprintf(stderr, "handshake step %d finished!\n", hands->step);
 		return 0;
 	}
 	uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
