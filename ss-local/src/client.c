@@ -1,13 +1,5 @@
-//
-//  local.c
-//  shadowsocks-libuv
-//
-//  Created by Cube on 14-9-15.
-//  Copyright (c) 2014年 Cube. All rights reserved.
-//
-
 #include <shadow.h>
-
+extern conf_t conf;
 void client_connect_cb(uv_stream_t * listener, int status) {
 	if (status < 0)
 		return;
@@ -36,10 +28,10 @@ void client_connect_cb(uv_stream_t * listener, int status) {
 	} while (0);
 	shadow_free(shadow);
 	if (iret < 0)
-		fprintf(stderr, "client_connect_cb:\t%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
+		fprintf(stderr, "client_connect_cb:\t%s:\t%s\n", uv_err_name(iret),
+				uv_strerror(iret));
 }
 
-//void client_readd_cb(uv_stream_t * stream, ssize_t nread, uv_buf_t buf)
 void client_read_cb(uv_stream_t * stream, long int nread,
 		const struct uv_buf_t * buf) {
 	shadow_t * shadow = stream->data;
@@ -47,7 +39,13 @@ void client_read_cb(uv_stream_t * stream, long int nread,
 		return;
 	if (nread > 0) {
 		int iret;
-		uv_buf_t _ = cipher_encrypt(shadow, buf, nread);
+		uv_buf_t _;
+		if (conf.ota) {
+			_ = cipher_encrypt_OTA(shadow, buf, nread);
+		} else {
+			_ = cipher_encrypt(shadow, buf, nread);
+		}
+		free(buf->base);
 		uv_write_t * write = malloc(sizeof(uv_write_t));
 		write->data = _.base;
 		iret = uv_write(write, (uv_stream_t *) shadow->remote, &_, 1,
@@ -55,7 +53,8 @@ void client_read_cb(uv_stream_t * stream, long int nread,
 		if (iret >= 0) {
 			return;
 		} else {
-			fprintf(stderr, "client_read_cb, uv_write:\t%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
+			fprintf(stderr, "client_read_cb, uv_write:\t%s:\t%s\n",
+					uv_err_name(iret), uv_strerror(iret));
 		}
 	}
 	uv_close((uv_handle_t *) stream, client_close_cb);
@@ -77,7 +76,6 @@ void client_write_cb(uv_write_t * write, int status) {
 
 void client_shutdown_cb(uv_shutdown_t * shutdown, int status) {
 	shadow_t * shadow = (shadow_t *) shutdown->data;
-	// shadow_free(shadow);
 	uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
 	free(shutdown);
 }

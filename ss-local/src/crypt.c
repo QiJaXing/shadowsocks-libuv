@@ -1,11 +1,3 @@
-//
-//  crypt.c
-//  shadowsocks-libuv
-//
-//  Created by Cube on 14/11/9.
-//  Copyright (c) 2014年 Cube. All rights reserved.
-//
-
 #include <shadow.h>
 
 extern conf_t conf;
@@ -37,9 +29,72 @@ void cipher_free(cipher_t * cipher) {
 		return;
 	if (cipher->key)
 		free(cipher->key);
+	if (cipher->iv)
+		free(cipher->iv);
 	free(cipher);
 }
-
+uv_buf_t cipher_encrypt_OTA(shadow_t * shadow, const struct uv_buf_t* plain,
+		size_t plainl) {
+	size_t encryptl, srcl;
+	cipher_t * cipher = shadow->cipher;
+	uint8_t * dst, *src, *encrypt;
+	uint32_t *counter;
+	if (!cipher->encrypt.init) {
+		shadow->socks5->data->atyp |= 0x10;
+		int ivl = EVP_CIPHER_iv_length(cipher->type);
+		uint8_t * iv = malloc(ivl + cipher->keyl);
+		RAND_bytes(iv, ivl);
+		EVP_CipherInit_ex(&cipher->encrypt.ctx, cipher->type, NULL, cipher->key,
+				iv, 1);
+		memcpy(iv + ivl, cipher->key, cipher->keyl);
+		size_t prepend = shadow->socks5->len - 3;
+		encryptl = ivl + prepend + 10 + sizeof(uint16_t) + 10 + plainl;
+		uint8_t *ptr;
+		src = malloc(prepend + 10 + sizeof(uint16_t) + 10 + (plainl>10?plainl:10));
+		ptr = src + prepend;
+		memcpy(src, &shadow->socks5->data->atyp, prepend);
+		HMAC(EVP_sha1(), iv, ivl + cipher->keyl, (unsigned char*) src, prepend,
+				ptr, NULL);
+		ptr += 10;
+		uint16_t data_len = htons((uint16_t) plainl);
+		memcpy(ptr, &data_len, sizeof(uint16_t));
+		ptr += sizeof(uint16_t);
+		cipher->counter = 0;
+		counter = (uint32_t *) (iv + ivl);
+		*counter = htonl(cipher->counter);
+		HMAC(EVP_sha1(), iv, ivl + sizeof(uint32_t),
+				(unsigned char*) plain->base, plainl, ptr, NULL);
+		ptr += 10;
+		memcpy(ptr, plain->base, plainl);
+		encrypt = malloc(encryptl);
+		memcpy(encrypt, iv, ivl);
+		dst = (uint8_t *) (encrypt + ivl);
+		cipher->iv = iv;
+		cipher->ivl = ivl;
+		cipher->encrypt.init = 1;
+		srcl = prepend + 10 + sizeof(uint16_t) + 10 + plainl;
+	} else {
+		encryptl = plainl + sizeof(uint16_t) + 10;
+		dst = (uint8_t *) malloc(encryptl);
+		encrypt = dst;
+		src = (uint8_t *) malloc(plainl>10?encryptl:sizeof(uint16_t) + 20);
+		uint16_t data_len = htons((uint16_t) plainl);
+		memcpy(src, &data_len, sizeof(uint16_t));
+		cipher->counter++;
+		//printf("counter: %d\t plainl:%d\n",cipher->counter,plainl);
+		counter = (uint32_t *) (cipher->iv + cipher->ivl);
+		*counter = htonl(cipher->counter);
+		HMAC(EVP_sha1(), cipher->iv, cipher->ivl + sizeof(uint32_t),
+				(unsigned char*) plain->base, plainl, src + sizeof(uint16_t),
+				NULL);
+		memcpy(src + sizeof(uint16_t) + 10, plain->base, plainl);
+		srcl = encryptl;
+	}
+	int _;
+	EVP_CipherUpdate(&cipher->encrypt.ctx, dst, &_, src, (int) srcl);
+	free(src);
+	return uv_buf_init((char *) encrypt, encryptl);
+}
 uv_buf_t cipher_encrypt(shadow_t * shadow, const struct uv_buf_t* plain,
 		size_t plainl) {
 	size_t encryptl;
@@ -73,9 +128,10 @@ uv_buf_t cipher_encrypt(shadow_t * shadow, const struct uv_buf_t* plain,
 		src = (uint8_t *) plain->base;
 	}
 	int _;
-	EVP_CipherUpdate(&cipher->encrypt.ctx, dst, &_, src,
-			(int) plainl);
-	free(plain->base);
+	EVP_CipherUpdate(&cipher->encrypt.ctx, dst, &_, src, (int) plainl);
+	if (!cipher->encrypt.init) {
+		free(src);
+	}
 	return uv_buf_init(encrypt, encryptl);
 }
 

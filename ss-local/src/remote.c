@@ -1,11 +1,3 @@
-//
-//  remote.c
-//  shadowsocks-libuv
-//
-//  Created by Cube on 14-9-15.
-//  Copyright (c) 2014年 Cube. All rights reserved.
-//
-
 #include <shadow.h>
 
 void remote_connect_cb(uv_connect_t * req, int status) {

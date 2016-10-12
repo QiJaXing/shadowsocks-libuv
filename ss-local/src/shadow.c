@@ -1,11 +1,3 @@
-//
-//  shadow.c
-//  shadowsocks-libuv
-//
-//  Created by Cube on 14-9-14.
-//  Copyright (c) 2014年 Cube. All rights reserved.
-//
-
 #include <shadow.h>
 
 shadow_t *
@@ -39,10 +31,8 @@ void shadow_free(shadow_t * shadow) {
 }
 
 void shadow_free_cb(uv_handle_t * handle) {
-	//TO-DO: may free null pointers
 	shadow_t * shadow = handle->data;
 	shadow_free(shadow);
-	// printf("closed\n");
 }
 void shadow_alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 	char *base = malloc(suggested_size);

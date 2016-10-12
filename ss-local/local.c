@@ -1,10 +1,3 @@
-//
-//  shadow.c
-//  shadowsocks-libuv
-//
-//  Created by Cube on 14-9-14.
-//  Copyright (c) 2014年 Cube. All rights reserved.
-//
 #include <getopt.h>
 #include <shadow.h>
 #include <string.h>
@@ -19,25 +12,19 @@ static void help(void) {
 					"  -l <local_port>            port number of your local server\n"
 					"  -k <password>              password of your remote server\n"
 					"  -m <encrypt_method>        encrypt method: rc4, "
+					"  -A                         Enable onetime authentication."
 					"                             aes-128-cfb, aes-192-cfb, aes-256-cfb,\n"
 					"                             bf-cfb, camellia-128-cfb, camellia-192-cfb,\n"
 					"                             camellia-256-cfb, cast5-cfb, des-cfb,\n"
 					"                             idea-cfb, rc2-cfb and seed-cfb\n "
-					"	Use `openssl list-cipher-commands to` list all supported encrypt method\n"
-//         "  [-t <timeout>]             socket timeout in seconds\n"
-//         "  [-c <config_file>]         config file in json\n"
-//         "  [-i <interface>]           network interface to bind,\n"
-//         "                             not available in redir mode\n"
-//         "  [-b <local_address>]       local address to bind,\n"
-//         "                             not available in server mode\n"
-			);
+					"	Use `openssl list-cipher-commands to` list all supported encrypt method\n");
 	exit(EXIT_FAILURE);
 }
 
 static void parse(int argc, char *argv[]) {
 	memset(&conf, 0, sizeof(conf));
 	char opt;
-	while ((opt = getopt(argc, argv, "s:p:b:l:k:m:")) != -1)
+	while ((opt = getopt(argc, argv, "s:p:b:l:k:m:A")) != -1)
 		switch (opt) {
 		case 's':
 			conf.remote.ip = optarg;
@@ -56,6 +43,9 @@ static void parse(int argc, char *argv[]) {
 			break;
 		case 'm':
 			conf.method = optarg;
+			break;
+		case 'A':
+			conf.ota = 1;
 			break;
 		default:
 			break;
@@ -94,7 +84,8 @@ int main(int argc, char *argv[]) {
 	int iret;
 	iret = uv_ip4_addr(conf.local.ip, atoi(conf.local.port), &addr);
 	if (iret < 0) {
-		fprintf(stderr, "uv_ipv4_addr:\t%s:\t%s\n", uv_err_name(iret), uv_strerror(iret));
+		fprintf(stderr, "uv_ipv4_addr:\t%s:\t%s\n", uv_err_name(iret),
+				uv_strerror(iret));
 		return iret;
 	}
 	do {

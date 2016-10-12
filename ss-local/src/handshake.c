@@ -1,11 +1,3 @@
-//
-//  handshake.c
-//  shadowsocks-libuv
-//
-//  Created by Cube on 14-9-14.
-//  Copyright (c) 2014年 Cube. All rights reserved.
-//
-
 #include <shadow.h>
 
 extern conf_t conf;
@@ -68,21 +60,13 @@ static int handshake_1st(uv_stream_t * stream, shadow_t * shadow,
 		rep->ver = 0x5;
 		rep->method = 0;
 
-//    printf("No.1 %d %d", req->ver, req->nmethod);
-//    uint8_t i = 0;
-//    for (; i < req->nmethod; i++) {
-//      printf(" %d", req->method[i]);
-//    }
-//    printf("\n");
-
 		uv_buf_t buf;
 		buf.len = sizeof(handshake_reply_t);
 		buf.base = (char *) rep;
 
 		uv_write_t * write = malloc(sizeof(uv_write_t));
 		write->data = rep;
-		// fprintf(stderr, "handshake step %d finished!\n", hands->step);
-		// move to step 2
+
 		hands->step = 2;
 
 		if (uv_write(write, stream, &buf, 1, handshake_write_cb))
@@ -120,7 +104,7 @@ static int handshake_2nd(uv_stream_t * stream, shadow_t * shadow,
 		uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
 		return ERROR;
 	}
-
+	//TO-DO add 0x10 to socks->atype to support OTA
 	shadow->socks5->data = socks;
 	uv_read_stop(stream);
 
@@ -130,41 +114,26 @@ static int handshake_2nd(uv_stream_t * stream, shadow_t * shadow,
 	remote_addr.sin_family = AF_INET;
 
 	uv_tcp_init(stream->loop, shadow->remote);
-	// uv_timer_start(shadow->remote, shadow_timer_cb, 60 * 1000, 0);
 	uv_connect_t * req = malloc(sizeof(uv_connect_t));
 	req->data = shadow;
 
 	if (!uv_tcp_connect(req, shadow->remote,
 			(const struct sockaddr*) &remote_addr, remote_connect_cb)) {
-		// fprintf(stderr, "handshake step %d finished!\n", hands->step);
 		return 0;
 	}
 	uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
 	return ERROR;
 }
 
-// uv_buf_t handshake_alloc_cb(uv_handle_t * handle, size_t suggest_size)
 void handshake_alloc_cb(uv_handle_t* handle, size_t suggested_size,
 		uv_buf_t* buf) {
 	char *base = malloc(socks5_max_len);
 	unsigned int len = socks5_max_len;
 	*buf = uv_buf_init(base, len);
 }
-//void handshake_read_cb(uv_stream_t *, long int,  const struct uv_buf_t *);
+
 void handshake_read_cb(uv_stream_t *stream, long int nread,
 		const struct uv_buf_t *buf) {
-	/*
-	 * Callback called when data was read on a stream.
-	 nread is > 0 if there is data available or < 0 on error. When we’ve reached EOF, nread will be set to UV_EOF.
-	 When nread < 0, the buf parameter might not point to a valid buffer; in that case buf.len and buf.base are both
-	 set to 0.
-	 Note: nread might be 0, which does not indicate an error or EOF. This is equivalent to EAGAIN or
-	 EWOULDBLOCK under read(2).
-	 The callee is responsible for stopping closing the stream when an error happens by calling uv_read_stop()
-	 or uv_close(). Trying to read from the stream again is undefined.
-	 The callee is responsible for freeing the buffer, libuv does not reuse it. The buffer may be a null buffer (where
-	 buf->base=NULL and buf->len=0) on error.*/
-
 	shadow_t * shadow = stream->data;
 	handshake_t * hands = shadow->data;
 	int iret = 0;
