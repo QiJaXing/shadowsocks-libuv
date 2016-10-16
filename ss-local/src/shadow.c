@@ -28,6 +28,7 @@ void shadow_free(shadow_t * shadow) {
 		free(shadow->socks5);
 	}
 	free(shadow);
+	// uv_stop(uv_default_loop());
 }
 
 void shadow_free_cb(uv_handle_t * handle) {
@@ -41,6 +42,8 @@ void shadow_alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) 
 }
 
 void shadow_write_cb(uv_write_t * write, int status) {
+	uv_buf_t * _ = (uv_buf_t *) write->data;
+	free(_->base);
 	free(write->data);
 	free(write);
 }

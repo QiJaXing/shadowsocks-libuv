@@ -18,16 +18,15 @@ extern conf_t conf;
  
  */
 
-static int
+int
 handshake_1st(uv_stream_t *, shadow_t *, handshake_t *);
 
-static int
+int
 handshake_2nd(uv_stream_t *, shadow_t *, handshake_t *);
 
 int handshake(uv_stream_t * stream) {
 	shadow_t * shadow = stream->data;
 	handshake_t * hands = shadow->data;
-
 	switch (hands->step) {
 	case 1:
 		if (hands->size < 2)
@@ -40,46 +39,52 @@ int handshake(uv_stream_t * stream) {
 	default:
 		break;
 	}
-	uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
 	return ERROR;
 }
-
-static int handshake_1st(uv_stream_t * stream, shadow_t * shadow,
-		handshake_t * hands) {
+int handshake_1st(uv_stream_t * stream, shadow_t * shadow, handshake_t * hands) {
 	handshake_request_t * req = hands->data;
-
 	if (hands->size < 2 + req->nmethod)
 		return KEEP_READ;
-
 	do {
 		if (req->ver != 0x5)
 			break;
 		uv_read_stop(stream);
-
 		handshake_reply_t * rep = calloc(1, sizeof(handshake_reply_t));
 		rep->ver = 0x5;
 		rep->method = 0;
-
-		uv_buf_t buf;
-		buf.len = sizeof(handshake_reply_t);
-		buf.base = (char *) rep;
-
+		uv_buf_t *buf = calloc(1, sizeof(uv_buf_t));
+		buf->len = sizeof(handshake_reply_t);
+		buf->base = (char *) rep;
 		uv_write_t * write = malloc(sizeof(uv_write_t));
-		write->data = rep;
-
+		write->data = buf;
 		hands->step = 2;
-
-		if (uv_write(write, stream, &buf, 1, handshake_write_cb))
+		if (uv_write(write, stream, buf, 1, handshake_1st_write_cb))
 			break;
 		return 0;
 	} while (0);
-
-	uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
 	return ERROR;
 }
-
-static int handshake_2nd(uv_stream_t * stream, shadow_t * shadow,
-		handshake_t * hands) {
+void handshake_1st_write_cb(uv_write_t * write, int status) {
+	shadow_t * shadow = write->handle->data;
+	handshake_t * hands = shadow->data;
+	if (hands->data)
+		free(hands->data);
+	hands->data = calloc(1, socks5_max_len);
+	hands->size = 0;
+	if (!status)
+		status = uv_read_start((uv_stream_t *) shadow->client,
+				handshake_alloc_cb, handshake_read_cb);
+	if (write->data) {
+		uv_buf_t *buf = (uv_buf_t *) write->data;
+		if (buf->base)
+			free(buf->base);
+		free(write->data);
+	}
+	free(write);
+	if (status)
+		uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
+}
+int handshake_2nd(uv_stream_t * stream, shadow_t * shadow, handshake_t * hands) {
 	socks5_s * socks = hands->data;
 
 	switch (socks->atyp) {
@@ -104,7 +109,6 @@ static int handshake_2nd(uv_stream_t * stream, shadow_t * shadow,
 		uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
 		return ERROR;
 	}
-	//TO-DO add 0x10 to socks->atype to support OTA
 	shadow->socks5->data = socks;
 	uv_read_stop(stream);
 
@@ -121,7 +125,7 @@ static int handshake_2nd(uv_stream_t * stream, shadow_t * shadow,
 			(const struct sockaddr*) &remote_addr, remote_connect_cb)) {
 		return 0;
 	}
-	uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
+	free(req);
 	return ERROR;
 }
 
@@ -139,49 +143,31 @@ void handshake_read_cb(uv_stream_t *stream, long int nread,
 	int iret = 0;
 	if (nread > 0) {
 		memcpy(hands->data + hands->size, buf->base, nread);
-		free(buf->base);
 		hands->size += nread;
 		iret = handshake(stream);
 	}
-	if (nread < 0 || iret == ERROR)
-		uv_close((uv_handle_t *) stream, shadow_free_cb);
-}
-
-void handshake_write_cb(uv_write_t * write, int status) {
-	shadow_t * shadow = write->handle->data;
-	handshake_t * hands = shadow->data;
-
-	if (hands->data)
+	if (buf->base)
+		free(buf->base);
+	if (nread < 0 || iret == ERROR) {
 		free(hands->data);
-	hands->data = calloc(1, socks5_max_len);
-	hands->size = 0;
-
-	if (!status)
-		status = uv_read_start((uv_stream_t *) shadow->client,
-				handshake_alloc_cb, handshake_read_cb);
-	free(write->data);
-	free(write);
-
-	if (status)
-		uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
+		uv_close((uv_handle_t *) stream, shadow_free_cb);
+	}
 }
 
 void fakereply_write_cb(uv_write_t * write, int status) {
 	shadow_t * shadow = write->handle->data;
 	if (shadow->data)
 		free(shadow->data);
-
 	shadow->data = NULL;
 	shadow->size = 0;
-
 	if (!status)
 		uv_read_start((uv_stream_t *) shadow->client, shadow_alloc_cb,
 				client_read_cb);
-
+	uv_buf_t* buf = write->data;
+	free(buf->base);
 	free(write->data);
 	free(write);
-
 	if (status)
-		uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
+		uv_close((uv_handle_t *) shadow->client, client_close_cb);
 }
 

@@ -82,6 +82,7 @@ int main(int argc, char *argv[]) {
 	uv_loop_init(loop);
 	struct sockaddr_in addr;
 	int iret;
+	signal(SIGPIPE, SIG_IGN);
 	iret = uv_ip4_addr(conf.local.ip, atoi(conf.local.port), &addr);
 	if (iret < 0) {
 		fprintf(stderr, "uv_ipv4_addr:\t%s:\t%s\n", uv_err_name(iret),
@@ -97,6 +98,7 @@ int main(int argc, char *argv[]) {
 			break;
 		return uv_run(loop, UV_RUN_DEFAULT);
 	} while (0);
+	free(listener);
 	return 0;
 }
 

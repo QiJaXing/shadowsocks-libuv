@@ -56,7 +56,7 @@ typedef struct {
 
 	struct {
 		int init;
-		EVP_CIPHER_CTX ctx;
+		EVP_CIPHER_CTX *ctx;
 	} encrypt, decrypt;
 
 } cipher_t;
@@ -85,13 +85,13 @@ uv_buf_t cipher_encrypt_OTA(shadow_t * shadow, const struct uv_buf_t*, size_t);
 uv_buf_t cipher_decrypt(shadow_t * shadow, const struct uv_buf_t*, size_t);
 
 void client_close_cb(uv_handle_t *);
-void client_read_cb(struct uv_stream_s *, long int, const struct uv_buf_t *);
-void client_write_cb(uv_write_t *, int);
+void client_read_cb(struct uv_stream_s *, long int, const uv_buf_t *);
+
 void client_connect_cb(uv_stream_t *, int);
 void client_shutdown_cb(uv_shutdown_t *, int);
 
 void remote_close_cb(uv_handle_t *);
-void remote_read_cb(struct uv_stream_s *, long int, const struct uv_buf_t *);
+void remote_read_cb(struct uv_stream_s *, long int, const uv_buf_t *);
 void remote_write_cb(uv_write_t *, int);
 void remote_connect_cb(uv_connect_t *, int);
 void remote_shutdown_cb(uv_shutdown_t *, int);
@@ -103,7 +103,7 @@ void shadow_alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
 void handshake_alloc_cb(uv_handle_t* handle, size_t suggested_size,
 		uv_buf_t* buf);
 void handshake_read_cb(struct uv_stream_s *, long int, const struct uv_buf_t *);
-void handshake_write_cb(uv_write_t *, int);
+void handshake_1st_write_cb(uv_write_t * write, int status);
 int handshake(uv_stream_t *);
 
 void fakereply_write_cb(uv_write_t *, int);

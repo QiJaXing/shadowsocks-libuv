@@ -17,8 +17,10 @@ cipher_t * cipher_new() {
 	}
 	cipher->keyl = EVP_CIPHER_key_length(cipher->type);
 	cipher->key = malloc(cipher->keyl);
-	EVP_CIPHER_CTX_init(&cipher->encrypt.ctx);
-	EVP_CIPHER_CTX_init(&cipher->decrypt.ctx);
+	cipher->encrypt.ctx = EVP_CIPHER_CTX_new();
+	cipher->decrypt.ctx = EVP_CIPHER_CTX_new();
+	EVP_CIPHER_CTX_init(cipher->encrypt.ctx);
+	EVP_CIPHER_CTX_init(cipher->decrypt.ctx);
 	EVP_BytesToKey(cipher->type, EVP_md5(), NULL, (uint8_t *) conf.pass,
 			(int) strlen(conf.pass), 1, cipher->key, NULL);
 	return cipher;
@@ -27,6 +29,11 @@ cipher_t * cipher_new() {
 void cipher_free(cipher_t * cipher) {
 	if (!cipher)
 		return;
+	if (cipher->encrypt.init)
+		EVP_CIPHER_CTX_free(cipher->encrypt.ctx);
+	if (cipher->decrypt.init)
+		EVP_CIPHER_CTX_free(cipher->decrypt.ctx);
+	EVP_cleanup();
 	if (cipher->key)
 		free(cipher->key);
 	if (cipher->iv)
@@ -44,13 +51,15 @@ uv_buf_t cipher_encrypt_OTA(shadow_t * shadow, const struct uv_buf_t* plain,
 		int ivl = EVP_CIPHER_iv_length(cipher->type);
 		uint8_t * iv = malloc(ivl + cipher->keyl);
 		RAND_bytes(iv, ivl);
-		EVP_CipherInit_ex(&cipher->encrypt.ctx, cipher->type, NULL, cipher->key,
+		EVP_CipherInit_ex(cipher->encrypt.ctx, cipher->type, NULL, cipher->key,
 				iv, 1);
 		memcpy(iv + ivl, cipher->key, cipher->keyl);
 		size_t prepend = shadow->socks5->len - 3;
 		encryptl = ivl + prepend + 10 + sizeof(uint16_t) + 10 + plainl;
 		uint8_t *ptr;
-		src = malloc(prepend + 10 + sizeof(uint16_t) + 10 + (plainl>10?plainl:10));
+		src = malloc(
+				prepend + 10 + sizeof(uint16_t) + 10
+						+ (plainl > 10 ? plainl : 10));
 		ptr = src + prepend;
 		memcpy(src, &shadow->socks5->data->atyp, prepend);
 		HMAC(EVP_sha1(), iv, ivl + cipher->keyl, (unsigned char*) src, prepend,
@@ -77,11 +86,11 @@ uv_buf_t cipher_encrypt_OTA(shadow_t * shadow, const struct uv_buf_t* plain,
 		encryptl = plainl + sizeof(uint16_t) + 10;
 		dst = (uint8_t *) malloc(encryptl);
 		encrypt = dst;
-		src = (uint8_t *) malloc(plainl>10?encryptl:sizeof(uint16_t) + 20);
+		src = (uint8_t *) malloc(
+				plainl > 10 ? encryptl : sizeof(uint16_t) + 20);
 		uint16_t data_len = htons((uint16_t) plainl);
 		memcpy(src, &data_len, sizeof(uint16_t));
 		cipher->counter++;
-		//printf("counter: %d\t plainl:%d\n",cipher->counter,plainl);
 		counter = (uint32_t *) (cipher->iv + cipher->ivl);
 		*counter = htonl(cipher->counter);
 		HMAC(EVP_sha1(), cipher->iv, cipher->ivl + sizeof(uint32_t),
@@ -91,7 +100,7 @@ uv_buf_t cipher_encrypt_OTA(shadow_t * shadow, const struct uv_buf_t* plain,
 		srcl = encryptl;
 	}
 	int _;
-	EVP_CipherUpdate(&cipher->encrypt.ctx, dst, &_, src, (int) srcl);
+	EVP_CipherUpdate(cipher->encrypt.ctx, dst, &_, src, (int) srcl);
 	free(src);
 	return uv_buf_init((char *) encrypt, encryptl);
 }
@@ -105,7 +114,7 @@ uv_buf_t cipher_encrypt(shadow_t * shadow, const struct uv_buf_t* plain,
 		int ivl = EVP_CIPHER_iv_length(cipher->type);
 		uint8_t * iv = malloc(ivl);
 		RAND_bytes(iv, ivl);
-		EVP_CipherInit_ex(&cipher->encrypt.ctx, cipher->type, NULL, cipher->key,
+		EVP_CipherInit_ex(cipher->encrypt.ctx, cipher->type, NULL, cipher->key,
 				iv, 1);
 		size_t prepend = shadow->socks5->len - 3;
 		uint8_t *ptr;
@@ -119,7 +128,6 @@ uv_buf_t cipher_encrypt(shadow_t * shadow, const struct uv_buf_t* plain,
 		memcpy(encrypt, iv, ivl);
 		dst = (uint8_t *) encrypt + ivl;
 		free(iv);
-		//plain->base = (char *) src;
 		cipher->encrypt.init = 1;
 	} else {
 		encryptl = plainl;
@@ -128,7 +136,7 @@ uv_buf_t cipher_encrypt(shadow_t * shadow, const struct uv_buf_t* plain,
 		src = (uint8_t *) plain->base;
 	}
 	int _;
-	EVP_CipherUpdate(&cipher->encrypt.ctx, dst, &_, src, (int) plainl);
+	EVP_CipherUpdate(cipher->encrypt.ctx, dst, &_, src, (int) plainl);
 	if (!cipher->encrypt.init) {
 		free(src);
 	}
@@ -149,7 +157,7 @@ uv_buf_t cipher_decrypt(shadow_t * shadow, const struct uv_buf_t* encrypt,
 		plainl = encryptl - ivl;
 		plain = malloc(plainl);
 		src = (uint8_t *) encrypt->base + ivl;
-		EVP_CipherInit_ex(&cipher->decrypt.ctx, cipher->type, NULL, cipher->key,
+		EVP_CipherInit_ex(cipher->decrypt.ctx, cipher->type, NULL, cipher->key,
 				iv, 0);
 		free(iv);
 		cipher->decrypt.init = 1;
@@ -159,9 +167,7 @@ uv_buf_t cipher_decrypt(shadow_t * shadow, const struct uv_buf_t* encrypt,
 		plain = malloc(plainl);
 	}
 	int _;
-	EVP_CipherUpdate(&cipher->decrypt.ctx, (uint8_t *) plain, &_, src,
+	EVP_CipherUpdate(cipher->decrypt.ctx, (uint8_t *) plain, &_, src,
 			(int) plainl);
-	free(encrypt->base);
-	//return plain;
 	return uv_buf_init(plain, plainl);
 }
