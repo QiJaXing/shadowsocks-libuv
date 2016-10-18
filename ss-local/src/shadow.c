@@ -34,6 +34,7 @@ void shadow_free_cb(uv_handle_t * handle) {
 	shadow_free(shadow);
 }
 void shadow_alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
+	suggested_size=suggested_size>=65535?65535:suggested_size;
 	char *base = malloc(suggested_size);
 	unsigned int len = suggested_size;
 	*buf = uv_buf_init(base, len);

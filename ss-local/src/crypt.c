@@ -101,7 +101,7 @@ uv_buf_t cipher_encrypt_OTA(shadow_t * shadow, const struct uv_buf_t* plain,
 				plainl > 10 ? encryptl : sizeof(uint16_t) + 20);
 		uint16_t data_len = htons((uint16_t) plainl);
 		memcpy(src, &data_len, sizeof(uint16_t));
-		cipher->counter=cipher->counter+1;
+		cipher->counter = cipher->counter + 1;
 		counter = (uint32_t *) (cipher->iv + cipher->ivl);
 		*counter = htonl(cipher->counter);
 		HMAC(EVP_sha1(), cipher->iv, cipher->ivl + sizeof(uint32_t),
