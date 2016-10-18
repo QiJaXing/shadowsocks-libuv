@@ -2,7 +2,10 @@
 #include <shadow.h>
 #include <string.h>
 conf_t conf;
-
+void signal_cb(uv_signal_t* handle, int signum) {
+	printf("stop process!\n");
+	uv_stop(handle->loop);
+}
 static void help(void) {
 	printf(
 			"Usage. ss-local\n"
@@ -73,9 +76,9 @@ static void parse(int argc, char *argv[]) {
 int main(int argc, char *argv[]) {
 	parse(argc, argv);
 	signal(SIGPIPE, SIG_IGN);
+	uv_signal_t sig;
 	// set rand seed
 	srand((unsigned int) time(NULL));
-
 	uv_tcp_t * listener = malloc(sizeof(uv_tcp_t));
 	uv_stream_t * stream = (uv_stream_t *) listener;
 	uv_loop_t * loop = uv_default_loop();
@@ -90,6 +93,10 @@ int main(int argc, char *argv[]) {
 		return iret;
 	}
 	do {
+		if (uv_signal_init(loop, &sig))
+			break;
+		if (uv_signal_start(&sig, signal_cb, SIGINT))
+			break;   //ctrl+c，
 		if (uv_tcp_init(loop, listener))
 			break;
 		if (uv_tcp_bind(listener, (const struct sockaddr*) &addr, 0))

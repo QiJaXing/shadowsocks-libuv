@@ -1,5 +1,4 @@
 #include <shadow.h>
-
 shadow_t *
 shadow_new(void) {
 	shadow_t * shadow = calloc(1, sizeof(shadow_t));
@@ -28,7 +27,6 @@ void shadow_free(shadow_t * shadow) {
 		free(shadow->socks5);
 	}
 	free(shadow);
-	// uv_stop(uv_default_loop());
 }
 
 void shadow_free_cb(uv_handle_t * handle) {

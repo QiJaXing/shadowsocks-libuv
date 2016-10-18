@@ -81,8 +81,10 @@ void handshake_1st_write_cb(uv_write_t * write, int status) {
 		free(write->data);
 	}
 	free(write);
-	if (status)
+	if (status) {
+		free(hands->data);
 		uv_close((uv_handle_t *) shadow->client, shadow_free_cb);
+	}
 }
 int handshake_2nd(uv_stream_t * stream, shadow_t * shadow, handshake_t * hands) {
 	socks5_s * socks = hands->data;

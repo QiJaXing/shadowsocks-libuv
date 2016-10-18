@@ -1,9 +1,8 @@
 #include <shadow.h>
-
+#include <openssl/err.h>
 extern conf_t conf;
 
 cipher_t * cipher_new() {
-	//OpenSSL_add_all_algorithms();
 	OpenSSL_add_all_algorithms();
 	cipher_t * cipher = calloc(1, sizeof(cipher_t));
 	if (cipher == NULL) {
@@ -29,15 +28,27 @@ cipher_t * cipher_new() {
 void cipher_free(cipher_t * cipher) {
 	if (!cipher)
 		return;
-	if (cipher->encrypt.init)
-		EVP_CIPHER_CTX_free(cipher->encrypt.ctx);
-	if (cipher->decrypt.init)
-		EVP_CIPHER_CTX_free(cipher->decrypt.ctx);
-	EVP_cleanup();
-	if (cipher->key)
+	if (cipher->key) {
 		free(cipher->key);
-	if (cipher->iv)
+		cipher->key = NULL;
+	}
+	if (cipher->iv) {
 		free(cipher->iv);
+		cipher->iv = NULL;
+	}
+	if (cipher->encrypt.ctx) {
+		EVP_CIPHER_CTX_free(cipher->encrypt.ctx);
+		cipher->encrypt.ctx = NULL;
+	}
+	if (cipher->decrypt.ctx) {
+		EVP_CIPHER_CTX_free(cipher->decrypt.ctx);
+		cipher->decrypt.ctx = NULL;
+	}
+	CRYPTO_cleanup_all_ex_data();
+	//ERR_free_strings();
+	ERR_free_strings();
+	ERR_remove_thread_state(0);
+	EVP_cleanup();
 	free(cipher);
 }
 uv_buf_t cipher_encrypt_OTA(shadow_t * shadow, const struct uv_buf_t* plain,
@@ -90,7 +101,7 @@ uv_buf_t cipher_encrypt_OTA(shadow_t * shadow, const struct uv_buf_t* plain,
 				plainl > 10 ? encryptl : sizeof(uint16_t) + 20);
 		uint16_t data_len = htons((uint16_t) plainl);
 		memcpy(src, &data_len, sizeof(uint16_t));
-		cipher->counter++;
+		cipher->counter=cipher->counter+1;
 		counter = (uint32_t *) (cipher->iv + cipher->ivl);
 		*counter = htonl(cipher->counter);
 		HMAC(EVP_sha1(), cipher->iv, cipher->ivl + sizeof(uint32_t),

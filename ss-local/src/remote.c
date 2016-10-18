@@ -75,7 +75,7 @@ void remote_shutdown_cb(uv_shutdown_t * shutdown, int status) {
 void remote_close_cb(uv_handle_t * handle) {
 	shadow_t * shadow = (shadow_t *) handle->data;
 	uv_read_stop((uv_stream_t *) shadow->client);
-	uv_shutdown_t shutdown = malloc(sizeof(uv_shutdown_t));
+	uv_shutdown_t* shutdown = malloc(sizeof(uv_shutdown_t));
 	shutdown->data = shadow;
 	uv_shutdown(shutdown, (uv_stream_t *) shadow->client, client_shutdown_cb);
 }
